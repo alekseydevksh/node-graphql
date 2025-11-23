@@ -61,11 +61,45 @@ export const createLoaders = (prisma: PrismaClient) => {
     return ids.map((id) => memberTypeMap.get(id) ?? null);
   });
 
+  const userSubscribedToLoader = new DataLoader<string, string[]>(async (userIds) => {
+    const subscriptions = await prisma.subscribersOnAuthors.findMany({
+      where: {
+        subscriberId: { in: Array.from(userIds) },
+      },
+      select: { subscriberId: true, authorId: true },
+    });
+    const subscriptionsByUser = new Map<string, string[]>();
+    for (const sub of subscriptions) {
+      const existing = subscriptionsByUser.get(sub.subscriberId) ?? [];
+      existing.push(sub.authorId);
+      subscriptionsByUser.set(sub.subscriberId, existing);
+    }
+    return userIds.map((userId) => subscriptionsByUser.get(userId) ?? []);
+  });
+
+  const subscribedToUserLoader = new DataLoader<string, string[]>(async (userIds) => {
+    const subscriptions = await prisma.subscribersOnAuthors.findMany({
+      where: {
+        authorId: { in: Array.from(userIds) },
+      },
+      select: { authorId: true, subscriberId: true },
+    });
+    const subscriptionsByUser = new Map<string, string[]>();
+    for (const sub of subscriptions) {
+      const existing = subscriptionsByUser.get(sub.authorId) ?? [];
+      existing.push(sub.subscriberId);
+      subscriptionsByUser.set(sub.authorId, existing);
+    }
+    return userIds.map((userId) => subscriptionsByUser.get(userId) ?? []);
+  });
+
   return {
     userLoader,
     postLoader,
     profileLoader,
     memberTypeLoader,
+    userSubscribedToLoader,
+    subscribedToUserLoader,
   };
 };
 

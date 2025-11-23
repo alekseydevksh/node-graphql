@@ -47,13 +47,9 @@ export const User = new GraphQLObjectType({
       resolve: async (
         parent: { id: string },
         _: unknown,
-        { prisma, loaders }: Context,
+        { loaders }: Context,
       ) => {
-        const subscriptions = await prisma.subscribersOnAuthors.findMany({
-          where: { subscriberId: parent.id },
-          select: { authorId: true },
-        });
-        const authorIds = subscriptions.map((sub) => sub.authorId);
+        const authorIds = await loaders.userSubscribedToLoader.load(parent.id);
         if (authorIds.length === 0) {
           return [];
         }
@@ -68,13 +64,9 @@ export const User = new GraphQLObjectType({
       resolve: async (
         parent: { id: string },
         _: unknown,
-        { prisma, loaders }: Context,
+        { loaders }: Context,
       ) => {
-        const subscriptions = await prisma.subscribersOnAuthors.findMany({
-          where: { authorId: parent.id },
-          select: { subscriberId: true },
-        });
-        const subscriberIds = subscriptions.map((sub) => sub.subscriberId);
+        const subscriberIds = await loaders.subscribedToUserLoader.load(parent.id);
         if (subscriberIds.length === 0) {
           return [];
         }
