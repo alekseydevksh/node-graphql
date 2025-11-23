@@ -3,6 +3,11 @@ import { UUIDType } from '../types/uuid.js';
 import { Post, CreatePostInput, ChangePostInput } from '../types/post.js';
 import { Profile, CreateProfileInput, ChangeProfileInput } from '../types/profile.js';
 import { User, CreateUserInput, ChangeUserInput } from '../types/user.js';
+import { PrismaClient } from '@prisma/client';
+
+interface Context {
+  prisma: PrismaClient;
+}
 
 export const Mutations = new GraphQLObjectType({
   name: 'Mutations',
@@ -14,6 +19,15 @@ export const Mutations = new GraphQLObjectType({
           type: new GraphQLNonNull(CreateUserInput),
         },
       },
+      resolve: (
+        _: unknown,
+        { dto }: { dto: { name: string; balance: number } },
+        { prisma }: Context,
+      ) => {
+        return prisma.user.create({
+          data: dto,
+        });
+      },
     },
     createProfile: {
       type: new GraphQLNonNull(Profile),
@@ -22,6 +36,24 @@ export const Mutations = new GraphQLObjectType({
           type: new GraphQLNonNull(CreateProfileInput),
         },
       },
+      resolve: (
+        _: unknown,
+        {
+          dto,
+        }: {
+          dto: {
+            isMale: boolean;
+            yearOfBirth: number;
+            userId: string;
+            memberTypeId: string;
+          };
+        },
+        { prisma }: Context,
+      ) => {
+        return prisma.profile.create({
+          data: dto,
+        });
+      },
     },
     createPost: {
       type: new GraphQLNonNull(Post),
@@ -29,6 +61,15 @@ export const Mutations = new GraphQLObjectType({
         dto: {
           type: new GraphQLNonNull(CreatePostInput),
         },
+      },
+      resolve: (
+        _: unknown,
+        { dto }: { dto: { title: string; content: string; authorId: string } },
+        { prisma }: Context,
+      ) => {
+        return prisma.post.create({
+          data: dto,
+        });
       },
     },
     changePost: {
@@ -41,6 +82,16 @@ export const Mutations = new GraphQLObjectType({
           type: new GraphQLNonNull(ChangePostInput),
         },
       },
+      resolve: (
+        _: unknown,
+        { id, dto }: { id: string; dto: { title?: string; content?: string } },
+        { prisma }: Context,
+      ) => {
+        return prisma.post.update({
+          where: { id },
+          data: dto,
+        });
+      },
     },
     changeProfile: {
       type: new GraphQLNonNull(Profile),
@@ -51,6 +102,22 @@ export const Mutations = new GraphQLObjectType({
         dto: {
           type: new GraphQLNonNull(ChangeProfileInput),
         },
+      },
+      resolve: (
+        _: unknown,
+        {
+          id,
+          dto,
+        }: {
+          id: string;
+          dto: { isMale?: boolean; yearOfBirth?: number; memberTypeId?: string };
+        },
+        { prisma }: Context,
+      ) => {
+        return prisma.profile.update({
+          where: { id },
+          data: dto,
+        });
       },
     },
     changeUser: {
@@ -63,6 +130,16 @@ export const Mutations = new GraphQLObjectType({
           type: new GraphQLNonNull(ChangeUserInput),
         },
       },
+      resolve: (
+        _: unknown,
+        { id, dto }: { id: string; dto: { name?: string; balance?: number } },
+        { prisma }: Context,
+      ) => {
+        return prisma.user.update({
+          where: { id },
+          data: dto,
+        });
+      },
     },
     deleteUser: {
       type: new GraphQLNonNull(GraphQLString),
@@ -70,6 +147,11 @@ export const Mutations = new GraphQLObjectType({
         id: {
           type: new GraphQLNonNull(UUIDType),
         },
+      },
+      resolve: (_: unknown, { id }: { id: string }, { prisma }: Context) => {
+        return prisma.user.delete({
+          where: { id },
+        });
       },
     },
     deletePost: {
@@ -79,6 +161,11 @@ export const Mutations = new GraphQLObjectType({
           type: new GraphQLNonNull(UUIDType),
         },
       },
+      resolve: (_: unknown, { id }: { id: string }, { prisma }: Context) => {
+        return prisma.post.delete({
+          where: { id },
+        });
+      },
     },
     deleteProfile: {
       type: new GraphQLNonNull(GraphQLString),
@@ -86,6 +173,11 @@ export const Mutations = new GraphQLObjectType({
         id: {
           type: new GraphQLNonNull(UUIDType),
         },
+      },
+      resolve: (_: unknown, { id }: { id: string }, { prisma }: Context) => {
+        return prisma.profile.delete({
+          where: { id },
+        });
       },
     },
     subscribeTo: {
@@ -98,6 +190,18 @@ export const Mutations = new GraphQLObjectType({
           type: new GraphQLNonNull(UUIDType),
         },
       },
+      resolve: (
+        _: unknown,
+        { userId, authorId }: { userId: string; authorId: string },
+        { prisma }: Context,
+      ) => {
+        return prisma.subscribersOnAuthors.create({
+          data: {
+            subscriberId: userId,
+            authorId,
+          },
+        });
+      },
     },
     unsubscribeFrom: {
       type: new GraphQLNonNull(GraphQLString),
@@ -108,6 +212,20 @@ export const Mutations = new GraphQLObjectType({
         authorId: {
           type: new GraphQLNonNull(UUIDType),
         },
+      },
+      resolve: (
+        _: unknown,
+        { userId, authorId }: { userId: string; authorId: string },
+        { prisma }: Context,
+      ) => {
+        return prisma.subscribersOnAuthors.delete({
+          where: {
+            subscriberId_authorId: {
+              subscriberId: userId,
+              authorId,
+            },
+          },
+        });
       },
     },
   }),

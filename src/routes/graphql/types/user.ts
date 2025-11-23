@@ -1,3 +1,5 @@
+import type { PrismaClient } from '@prisma/client';
+
 import {
   GraphQLObjectType,
   GraphQLInputObjectType,
@@ -9,6 +11,10 @@ import {
 import { UUIDType } from './uuid.js';
 import { Post } from './post.js';
 import { Profile } from './profile.js';
+
+interface Context {
+  prisma: PrismaClient;
+}
 
 export const User = new GraphQLObjectType({
   name: 'User',
@@ -24,15 +30,51 @@ export const User = new GraphQLObjectType({
     },
     profile: {
       type: Profile,
+      resolve: (parent: { id: string }, _: unknown, { prisma }: Context) => {
+        return prisma.profile.findUnique({
+          where: { userId: parent.id },
+        });
+      },
     },
     posts: {
       type: new GraphQLNonNull(new GraphQLList(new GraphQLNonNull(Post))),
+      resolve: (parent: { id: string }, _: unknown, { prisma }: Context) => {
+        return prisma.post.findMany({
+          where: { authorId: parent.id },
+        });
+      },
     },
     userSubscribedTo: {
       type: new GraphQLNonNull(new GraphQLList(new GraphQLNonNull(User))),
+      resolve: async (parent: { id: string }, _: unknown, { prisma }: Context) => {
+        const subscriptions = await prisma.subscribersOnAuthors.findMany({
+          where: { subscriberId: parent.id },
+          select: { authorId: true },
+        });
+        const authorIds = subscriptions.map((sub) => sub.authorId);
+        if (authorIds.length === 0) {
+          return [];
+        }
+        return prisma.user.findMany({
+          where: { id: { in: authorIds } },
+        });
+      },
     },
     subscribedToUser: {
       type: new GraphQLNonNull(new GraphQLList(new GraphQLNonNull(User))),
+      resolve: async (parent: { id: string }, _: unknown, { prisma }: Context) => {
+        const subscriptions = await prisma.subscribersOnAuthors.findMany({
+          where: { authorId: parent.id },
+          select: { subscriberId: true },
+        });
+        const subscriberIds = subscriptions.map((sub) => sub.subscriberId);
+        if (subscriberIds.length === 0) {
+          return [];
+        }
+        return prisma.user.findMany({
+          where: { id: { in: subscriberIds } },
+        });
+      },
     },
   }),
 });
@@ -60,3 +102,4 @@ export const ChangeUserInput = new GraphQLInputObjectType({
     },
   }),
 });
+
