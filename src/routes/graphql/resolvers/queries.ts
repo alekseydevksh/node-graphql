@@ -1,3 +1,5 @@
+import type { Loaders } from '../loaders.js';
+
 import { GraphQLObjectType, GraphQLNonNull, GraphQLList } from 'graphql';
 import { UUIDType } from '../types/uuid.js';
 import { MemberType, MemberTypeIdEnum } from '../types/member-type.js';
@@ -8,6 +10,7 @@ import { PrismaClient } from '@prisma/client';
 
 interface Context {
   prisma: PrismaClient;
+  loaders: Loaders;
 }
 
 export const RootQueryType = new GraphQLObjectType({

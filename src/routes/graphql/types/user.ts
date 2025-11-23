@@ -1,4 +1,5 @@
 import type { PrismaClient } from '@prisma/client';
+import type { Loaders } from '../loaders.js';
 
 import {
   GraphQLObjectType,
@@ -14,6 +15,7 @@ import { Profile } from './profile.js';
 
 interface Context {
   prisma: PrismaClient;
+  loaders: Loaders;
 }
 
 export const User = new GraphQLObjectType({
@@ -30,23 +32,23 @@ export const User = new GraphQLObjectType({
     },
     profile: {
       type: Profile,
-      resolve: (parent: { id: string }, _: unknown, { prisma }: Context) => {
-        return prisma.profile.findUnique({
-          where: { userId: parent.id },
-        });
+      resolve: (parent: { id: string }, _: unknown, { loaders }: Context) => {
+        return loaders.profileLoader.load(parent.id);
       },
     },
     posts: {
       type: new GraphQLNonNull(new GraphQLList(new GraphQLNonNull(Post))),
-      resolve: (parent: { id: string }, _: unknown, { prisma }: Context) => {
-        return prisma.post.findMany({
-          where: { authorId: parent.id },
-        });
+      resolve: (parent: { id: string }, _: unknown, { loaders }: Context) => {
+        return loaders.postLoader.load(parent.id);
       },
     },
     userSubscribedTo: {
       type: new GraphQLNonNull(new GraphQLList(new GraphQLNonNull(User))),
-      resolve: async (parent: { id: string }, _: unknown, { prisma }: Context) => {
+      resolve: async (
+        parent: { id: string },
+        _: unknown,
+        { prisma, loaders }: Context,
+      ) => {
         const subscriptions = await prisma.subscribersOnAuthors.findMany({
           where: { subscriberId: parent.id },
           select: { authorId: true },
@@ -55,14 +57,19 @@ export const User = new GraphQLObjectType({
         if (authorIds.length === 0) {
           return [];
         }
-        return prisma.user.findMany({
-          where: { id: { in: authorIds } },
-        });
+        return Promise.all(authorIds.map((id) => loaders.userLoader.load(id))).then(
+          (users) =>
+            users.filter((user): user is NonNullable<typeof user> => user !== null),
+        );
       },
     },
     subscribedToUser: {
       type: new GraphQLNonNull(new GraphQLList(new GraphQLNonNull(User))),
-      resolve: async (parent: { id: string }, _: unknown, { prisma }: Context) => {
+      resolve: async (
+        parent: { id: string },
+        _: unknown,
+        { prisma, loaders }: Context,
+      ) => {
         const subscriptions = await prisma.subscribersOnAuthors.findMany({
           where: { authorId: parent.id },
           select: { subscriberId: true },
@@ -71,9 +78,10 @@ export const User = new GraphQLObjectType({
         if (subscriberIds.length === 0) {
           return [];
         }
-        return prisma.user.findMany({
-          where: { id: { in: subscriberIds } },
-        });
+        return Promise.all(subscriberIds.map((id) => loaders.userLoader.load(id))).then(
+          (users) =>
+            users.filter((user): user is NonNullable<typeof user> => user !== null),
+        );
       },
     },
   }),
@@ -102,4 +110,3 @@ export const ChangeUserInput = new GraphQLInputObjectType({
     },
   }),
 });
-
