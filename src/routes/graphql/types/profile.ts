@@ -1,4 +1,5 @@
 import type { PrismaClient } from '@prisma/client';
+import type { Loaders } from '../loaders.js';
 
 import {
   GraphQLObjectType,
@@ -12,6 +13,7 @@ import { MemberType, MemberTypeIdEnum } from './member-type.js';
 
 interface Context {
   prisma: PrismaClient;
+  loaders: Loaders;
 }
 
 export const Profile = new GraphQLObjectType({
@@ -28,10 +30,8 @@ export const Profile = new GraphQLObjectType({
     },
     memberType: {
       type: new GraphQLNonNull(MemberType),
-      resolve: (parent: { memberTypeId: string }, _: unknown, { prisma }: Context) => {
-        return prisma.memberType.findUnique({
-          where: { id: parent.memberTypeId },
-        });
+      resolve: (parent: { memberTypeId: string }, _: unknown, { loaders }: Context) => {
+        return loaders.memberTypeLoader.load(parent.memberTypeId);
       },
     },
   }),

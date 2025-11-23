@@ -1,3 +1,5 @@
+import type { Loaders } from '../loaders.js';
+
 import { GraphQLObjectType, GraphQLString, GraphQLNonNull } from 'graphql';
 import { UUIDType } from '../types/uuid.js';
 import { Post, CreatePostInput, ChangePostInput } from '../types/post.js';
@@ -7,6 +9,7 @@ import { PrismaClient } from '@prisma/client';
 
 interface Context {
   prisma: PrismaClient;
+  loaders: Loaders;
 }
 
 export const Mutations = new GraphQLObjectType({
@@ -148,10 +151,11 @@ export const Mutations = new GraphQLObjectType({
           type: new GraphQLNonNull(UUIDType),
         },
       },
-      resolve: (_: unknown, { id }: { id: string }, { prisma }: Context) => {
-        return prisma.user.delete({
+      resolve: async (_: unknown, { id }: { id: string }, { prisma }: Context) => {
+        await prisma.user.delete({
           where: { id },
         });
+        return id;
       },
     },
     deletePost: {
@@ -161,10 +165,11 @@ export const Mutations = new GraphQLObjectType({
           type: new GraphQLNonNull(UUIDType),
         },
       },
-      resolve: (_: unknown, { id }: { id: string }, { prisma }: Context) => {
-        return prisma.post.delete({
+      resolve: async (_: unknown, { id }: { id: string }, { prisma }: Context) => {
+        await prisma.post.delete({
           where: { id },
         });
+        return id;
       },
     },
     deleteProfile: {
@@ -174,10 +179,11 @@ export const Mutations = new GraphQLObjectType({
           type: new GraphQLNonNull(UUIDType),
         },
       },
-      resolve: (_: unknown, { id }: { id: string }, { prisma }: Context) => {
-        return prisma.profile.delete({
+      resolve: async (_: unknown, { id }: { id: string }, { prisma }: Context) => {
+        await prisma.profile.delete({
           where: { id },
         });
+        return id;
       },
     },
     subscribeTo: {
@@ -190,17 +196,18 @@ export const Mutations = new GraphQLObjectType({
           type: new GraphQLNonNull(UUIDType),
         },
       },
-      resolve: (
+      resolve: async (
         _: unknown,
         { userId, authorId }: { userId: string; authorId: string },
         { prisma }: Context,
       ) => {
-        return prisma.subscribersOnAuthors.create({
+        await prisma.subscribersOnAuthors.create({
           data: {
             subscriberId: userId,
             authorId,
           },
         });
+        return userId;
       },
     },
     unsubscribeFrom: {
@@ -213,12 +220,12 @@ export const Mutations = new GraphQLObjectType({
           type: new GraphQLNonNull(UUIDType),
         },
       },
-      resolve: (
+      resolve: async (
         _: unknown,
         { userId, authorId }: { userId: string; authorId: string },
         { prisma }: Context,
       ) => {
-        return prisma.subscribersOnAuthors.delete({
+        await prisma.subscribersOnAuthors.delete({
           where: {
             subscriberId_authorId: {
               subscriberId: userId,
@@ -226,6 +233,7 @@ export const Mutations = new GraphQLObjectType({
             },
           },
         });
+        return userId;
       },
     },
   }),
